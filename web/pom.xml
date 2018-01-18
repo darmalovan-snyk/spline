@@ -22,10 +22,10 @@
     <packaging>war</packaging>
 
     <parent>
-        <groupId>za.co.absa.spline</groupId>
+        <groupId>io.kensu.forks</groupId>
         <artifactId>spline-parent</artifactId>
         <relativePath>../parent/pom.xml</relativePath>
-        <version>0.2.5</version>
+        <version>0.2.5-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -36,22 +36,22 @@
 
     <dependencies>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-commons</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-model</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-persistence-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-persistence-mongo</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -241,6 +241,7 @@
                             <target name="ui-build">
                                 <echo>Preparing UI build</echo>
                                 <!-- Install NPM dependencies -->
+                                <echo>Install NPM dependencies</echo>
                                 <exec executable="cmd" dir="${webui.basedir}" osfamily="windows" failonerror="true">
                                     <arg line="/c npm install --no-color" />
                                 </exec>
@@ -249,6 +250,7 @@
                                 </exec>
 
                                 <!-- Install typings -->
+                                <echo>Install typings</echo>
                                 <exec executable="cmd" dir="${webui.basedir}" osfamily="windows" failonerror="true">
                                     <arg line="/c npm run install-typings --no-color" />
                                 </exec>

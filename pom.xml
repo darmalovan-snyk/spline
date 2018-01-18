@@ -18,12 +18,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>za.co.absa.spline</groupId>
+    <groupId>io.kensu.forks</groupId>
     <artifactId>spline</artifactId>
-    <version>0.2.5</version>
+    <version>0.2.5-SNAPSHOT</version>
 
     <packaging>pom</packaging>
 
+    <!-- commented by Kensu
     <scm>
         <url>https://bitbucket.absa.co.za/projects/BACIBBD/repos/spline/browse</url>
         <connection>scm:git:https://bitbucket.absa.co.za/scm/bacibbd/spline.git</connection>
@@ -40,16 +41,16 @@
             <id>ossrh</id>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
-    </distributionManagement>
+    </distributionManagement> -->
 
     <modules>
         <module>parent</module>
         <module>commons</module>
         <module>model</module>
         <module>core</module>
-        <module>web</module>
-        <module>sample</module>
         <module>persistence</module>
+        <module>sample</module>
+        <module>web</module>
     </modules>
 
     <profiles>

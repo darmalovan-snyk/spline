@@ -21,10 +21,10 @@
     <packaging>jar</packaging>
 
     <parent>
-        <groupId>za.co.absa.spline</groupId>
+        <groupId>io.kensu.forks</groupId>
         <artifactId>spline-parent</artifactId>
         <relativePath>../parent/pom.xml</relativePath>
-        <version>0.2.5</version>
+        <version>0.2.5-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -39,22 +39,22 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-persistence-mongo</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-persistence-atlas</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>za.co.absa.spline</groupId>
+            <groupId>io.kensu.forks</groupId>
             <artifactId>spline-persistence-hdfs</artifactId>
             <version>${project.version}</version>
         </dependency>

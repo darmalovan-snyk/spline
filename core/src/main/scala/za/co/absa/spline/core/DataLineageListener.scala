@@ -77,7 +77,7 @@ class DataLineageListener(persistenceFactory: PersistenceFactory, hadoopConfigur
       log debug s"Preparing lineage"
       val eventuallyStored = for {
         transformedLineage <- transformationPipeline(lineage) andThen { case Success(_) => log debug s"Lineage is prepared" }
-        storeEvidence <- persistenceWriter.store(transformedLineage) andThen { case Success(_) => log debug s"Lineage is persisted" }
+        storeEvidence <- /* Kensu specifics */ persistenceWriter.kensuStore(transformedLineage, qe) andThen { case Success(_) => log debug s"Lineage is persisted" }
       } yield storeEvidence
 
       Await.result(eventuallyStored, 10 minutes)

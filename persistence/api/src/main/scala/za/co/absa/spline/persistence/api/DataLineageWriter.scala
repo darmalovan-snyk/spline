@@ -18,6 +18,9 @@ package za.co.absa.spline.persistence.api
 
 import za.co.absa.spline.model.DataLineage
 
+// no spark in here ...
+//import org.apache.spark.sql.execution.QueryExecution
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -29,6 +32,16 @@ trait DataLineageWriter {
     * The method stores a particular data lineage to the persistence layer.
     *
     * @param lineage A data lineage that will be stored
+    * @param queryExecution added by Kensu to allow extension of the Lineage to columns level
     */
   def store(lineage: DataLineage)(implicit ec: ExecutionContext) : Future[Unit]
+
+  /**
+    * The method stores a particular data lineage to the persistence layer.
+    * This method had been added by Kensu to allow extension of the Lineage to columns level
+    *
+    * @param lineage A data lineage that will be stored
+    * @param queryExecution to allow lineage extension
+    */
+  def kensuStore[QueryExecution](lineage: DataLineage, queryExecution:QueryExecution)(implicit ec: ExecutionContext) : Future[Unit] = store(lineage)
 }

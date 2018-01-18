@@ -26,23 +26,7 @@ import za.co.absa.spline.model.op._
 import scala.concurrent.Future
 
 class MongoDataLineageReaderSpec extends MongoDataLineagePersistenceSpecBase {
-  "List method" should "load descriptions from a database." in {
-    val testLineages = Seq(
-      createDataLineage("appID1", "appName1"),
-      createDataLineage("appID2", "appName2"),
-      createDataLineage("appID3", "appName3")
-    )
-    val expectedDescriptors = testLineages.map(l => PersistedDatasetDescriptor(
-      datasetId = l.rootDataset.id,
-      appId = l.appId,
-      appName = l.appName,
-      path = new URI(l.rootOperation.asInstanceOf[Write].path),
-      timestamp = l.timestamp))
 
-    val descriptions = Future.sequence(testLineages.map(i => mongoWriter.store(i))).flatMap(_ => mongoReader.list().map(_.toSeq))
-
-    descriptions.map(i => i should contain allElementsOf expectedDescriptors)
-  }
 
   "LoadLatest method" should "load latest lineage record from a database for a give path" in {
     val path = "hdfs://a/b/c"
@@ -68,36 +52,6 @@ class MongoDataLineageReaderSpec extends MongoDataLineagePersistenceSpecBase {
     )
 
     val result = Future.sequence(testLineages.map(i => mongoWriter.store(i))).flatMap(_ => mongoReader.loadLatest(path))
-
-    result.map(resultItem => resultItem shouldEqual None)
-  }
-
-  "SearchDataset method" should "find the correct lineage ID according a given criteria" in {
-    val path = "hdfs://a/b/c"
-    val testLineages = Seq(
-      createDataLineage("appID1", "appName1", 1L, path),
-      createDataLineage("appID1", "appName1", 2L),
-      createDataLineage("appID2", "appName2", 30L, path),
-      createDataLineage("appID2", "appName2", 4L),
-      createDataLineage("appID3", "appName2", 5L, path)
-    )
-
-    val result = Future.sequence(testLineages.map(i => mongoWriter.store(i))).flatMap(_ => mongoReader.searchDataset(path, "appID2"))
-
-    result.map(resultItem => resultItem shouldEqual Some(testLineages(2).rootDataset.id))
-  }
-
-  "SearchDataset method" should "return None if there is no record for a given criteria" in {
-    val path = "hdfs://a/b/c"
-    val testLineages = Seq(
-      createDataLineage("appID1", "appName1", 1L, path),
-      createDataLineage("appID1", "appName1", 2L),
-      createDataLineage("appID2", "appName2", 30L),
-      createDataLineage("appID2", "appName2", 4L),
-      createDataLineage("appID3", "appName2", 5L, path)
-    )
-
-    val result = Future.sequence(testLineages.map(i => mongoWriter.store(i))).flatMap(_ => mongoReader.searchDataset(path, "appID2"))
 
     result.map(resultItem => resultItem shouldEqual None)
   }
