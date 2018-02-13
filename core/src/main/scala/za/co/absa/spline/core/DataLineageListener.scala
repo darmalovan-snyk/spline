@@ -24,7 +24,7 @@ import za.co.absa.spline.common.transformations.AsyncTransformationPipeline
 import za.co.absa.spline.core.transformations.{ForeignMetaDatasetInjector, LineageProjectionMerger}
 import za.co.absa.spline.persistence.api.PersistenceFactory
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.Success
@@ -67,16 +67,20 @@ class DataLineageListener(persistenceFactory: PersistenceFactory, hadoopConfigur
     */
   def onFailure(funcName: String, qe: QueryExecution, exception: Exception): Unit = processQueryExecution(funcName, qe)
 
+  def extractLineage(qe:QueryExecution):Future[za.co.absa.spline.model.DataLineage] = {
+    val lineage = harvester harvestLineage qe
+    log debug s"Preparing lineage"
+    transformationPipeline(lineage) andThen { case Success(_) => log debug s"Lineage is prepared" }
+  }
 
-  private def processQueryExecution(funcName: String, qe: QueryExecution): Unit = {
+  def processQueryExecution(funcName: String, qe: QueryExecution, forFunc:Option[String=>Boolean] = Some((_:String)=="save")): Unit = {
     log debug s"Action '$funcName' execution finished"
-    if (funcName == "save") {
+    if (!forFunc.isDefined || forFunc.get(funcName)) {
       log debug s"Start tracking lineage for action '$funcName'"
       log debug s"Extracting raw lineage"
-      val lineage = harvester harvestLineage qe
-      log debug s"Preparing lineage"
+
       val eventuallyStored = for {
-        transformedLineage <- transformationPipeline(lineage) andThen { case Success(_) => log debug s"Lineage is prepared" }
+        transformedLineage <- extractLineage(qe)
         storeEvidence <- /* Kensu specifics */ persistenceWriter.kensuStore(transformedLineage, qe) andThen { case Success(_) => log debug s"Lineage is persisted" }
       } yield storeEvidence
 
