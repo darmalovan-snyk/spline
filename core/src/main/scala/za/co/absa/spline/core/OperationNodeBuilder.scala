@@ -21,10 +21,10 @@ import java.util.UUID.randomUUID
 
 import com.databricks.spark.xml.XmlRelation
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.sql.JDBCRelation
+import org.apache.spark.sql.{Dataset, JDBCRelation}
 import org.apache.spark.sql.catalyst.expressions.SortOrder
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation, SaveIntoDataSourceCommand}
+import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.sources.BaseRelation
 import za.co.absa.spline.model.expr.Expression
 import za.co.absa.spline.model.op.MetaDataSource
@@ -54,8 +54,15 @@ class OperationNodeBuilderFactory(implicit hadoopConfiguration: Configuration, m
     case s: Sort => new SortNodeBuilder(s)
     case s: Aggregate => new AggregateNodeBuilder(s)
     case a: SubqueryAlias => new AliasNodeBuilder(a)
-    case sc: SaveIntoDataSourceCommand => new DestinationNodeBuilder(sc)
+
+    // spark 2.2+ only
+    case sc if sc.getClass.getName == "org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand" => 
+      new DestinationNodeBuilder(sc.asInstanceOf[org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand])
+    // spark 2.1 => no SaveIntoDataSourceCommand available
+    case f:FakeSaveIntoDatasourceFromDatasetCommand => new SaveDatasetNodeBuilder(f)
+    
     case lr: LogicalRelation => new SourceNodeBuilder(lr)
+
     case x => new GenericNodeBuilder(x)
   }
 }
@@ -170,6 +177,20 @@ private class SourceNodeBuilder(val operation: LogicalRelation)
   }
 }
 
+private class SaveDatasetNodeBuilder (val operation:FakeSaveIntoDatasourceFromDatasetCommand)
+                              (implicit hadoopConfiguration: Configuration, val metaDatasetFactory: MetaDatasetFactory) extends OperationNodeBuilder[FakeSaveIntoDatasourceFromDatasetCommand] {
+
+  override val outputMetaDataset: UUID = metaDatasetFactory.create(operation.query)
+
+  def build(): op.Operation = {
+    op.Write(
+      buildOperationProps(),
+      operation.provider,
+      PathUtils.getQualifiedPath(hadoopConfiguration)(operation.options.getOrElse("path", ""))
+    )
+  }
+}
+
 /**
   * The class represents a builder of operations nodes dedicated for Spark persist operation.
   *
@@ -177,8 +198,8 @@ private class SourceNodeBuilder(val operation: LogicalRelation)
   * @param hadoopConfiguration A hadoop configuration
   * @param metaDatasetFactory  A factory of meta data sets
   */
-private class DestinationNodeBuilder(val operation: SaveIntoDataSourceCommand)
-                                    (implicit hadoopConfiguration: Configuration, val metaDatasetFactory: MetaDatasetFactory) extends OperationNodeBuilder[SaveIntoDataSourceCommand] {
+private class DestinationNodeBuilder(val operation: org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand)
+                                    (implicit hadoopConfiguration: Configuration, val metaDatasetFactory: MetaDatasetFactory) extends OperationNodeBuilder[org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand] {
 
   override val outputMetaDataset: UUID = metaDatasetFactory.create(operation.query)
 
