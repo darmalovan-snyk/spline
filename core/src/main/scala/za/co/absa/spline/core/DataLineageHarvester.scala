@@ -17,9 +17,12 @@
 package za.co.absa.spline.core
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.sql.{Dataset, DataFrameWriter}
+import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.QueryExecution
-import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand
+import org.apache.spark.util.Utils
+//import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand
 import za.co.absa.spline.model.DataLineage
 import za.co.absa.spline.model.op.Operation
 
@@ -32,6 +35,26 @@ import scala.language.postfixOps
   */
 class DataLineageHarvester(hadoopConfiguration: Configuration) {
 
+  def harvestLineage(writer: org.apache.spark.sql.DataFrameWriter[_]): DataLineage = {
+    val attributeFactory = new AttributeFactory()
+    val metaDatasetFactory = new MetaDatasetFactory(attributeFactory)
+    val operationNodeBuilderFactory = new OperationNodeBuilderFactory()(hadoopConfiguration, metaDatasetFactory)
+    
+    val fake = FakeSaveIntoDatasourceFromDatasetCommand(writer)
+
+    val nodes = harvestOperationNodes(fake, operationNodeBuilderFactory)
+
+    val sparkContext = fake.ds.queryExecution.sparkSession.sparkContext
+
+    DataLineage(
+      sparkContext.applicationId,
+      sparkContext.appName,
+      System.currentTimeMillis(),
+      nodes,
+      metaDatasetFactory.getAll(),
+      attributeFactory.getAll()
+    )
+  }
 
   /** A main method of the object that performs transformation of Spark internal structures to library lineage representation.
     *
@@ -71,8 +94,21 @@ class DataLineageHarvester(hadoopConfiguration: Configuration) {
           visitedNodes += (currentOperation -> result.size)
           currentPosition = Some(result.size)
           result += newNode
+
+
+
           currentOperation match {
-            case x: SaveIntoDataSourceCommand => stack.push((x.query, currentPosition.get))
+            case x if x.getClass.getSimpleName == "FakeSaveIntoDatasourceFromDatasetCommand" => 
+              val f = x.getClass.getDeclaredField("ds")
+              f.setAccessible(true)
+              val ds = f.get(x).asInstanceOf[Dataset[_]]
+              stack.push((ds.queryExecution.analyzed, currentPosition.get))
+
+            case x if x.getClass.getSimpleName == "SaveIntoDataSourceCommand" => 
+              val f = x.getClass.getDeclaredField("query")
+              f.setAccessible(true)
+              stack.push((f.get(x).asInstanceOf[LogicalPlan], currentPosition.get))
+
             case x => x.children.reverse.map(op => stack.push((op, currentPosition.get)))
           }
           newNode
@@ -86,3 +122,20 @@ class DataLineageHarvester(hadoopConfiguration: Configuration) {
     result.map(i => i.build())
   }
 }
+
+private[core] case class FakeSaveIntoDatasourceFromDatasetCommand(writer:DataFrameWriter[_]) extends org.apache.spark.sql.catalyst.plans.logical.Command {
+  private def getF[T](o:Any, f:String):T = {
+    val field = o.getClass.getDeclaredFields.find(x => x.getName == f || x.getName.endsWith("$$"+f)).get
+    field.setAccessible(true)
+    field.get(o).asInstanceOf[T]
+  }
+
+  val ds:org.apache.spark.sql.Dataset[_] = getF[org.apache.spark.sql.Dataset[_]](writer, "df")
+  val options:Map[String, String] = getF[scala.collection.mutable.HashMap[String, String]](writer, "extraOptions").toMap
+
+  val query = ds.queryExecution.analyzed
+  val provider = getF(writer, "source").asInstanceOf[String]
+
+  override protected def innerChildren: Seq[QueryPlan[_]] = Seq(ds.queryExecution.analyzed/* in 2.1 logical plan is a queryplan .query*/ )
+}
+

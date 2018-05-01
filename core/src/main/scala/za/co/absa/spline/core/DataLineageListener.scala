@@ -17,6 +17,7 @@
 package za.co.absa.spline.core
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.sql.{Dataset, DataFrameWriter}
 import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.util.QueryExecutionListener
 import org.slf4s.Logging
@@ -67,9 +68,15 @@ class DataLineageListener(persistenceFactory: PersistenceFactory, hadoopConfigur
     */
   def onFailure(funcName: String, qe: QueryExecution, exception: Exception): Unit = processQueryExecution(funcName, qe)
 
+  def extractLineage(w:DataFrameWriter[_]):Future[za.co.absa.spline.model.DataLineage] = {
+    val lineage = harvester harvestLineage w
+    log debug s"Preparing lineage from DataFrameWriter"
+    transformationPipeline(lineage) andThen { case Success(_) => log debug s"Lineage is prepared" }
+  }
+
   def extractLineage(qe:QueryExecution):Future[za.co.absa.spline.model.DataLineage] = {
     val lineage = harvester harvestLineage qe
-    log debug s"Preparing lineage"
+    log debug s"Preparing lineage from QueryExecution"
     transformationPipeline(lineage) andThen { case Success(_) => log debug s"Lineage is prepared" }
   }
 
@@ -82,6 +89,29 @@ class DataLineageListener(persistenceFactory: PersistenceFactory, hadoopConfigur
       val eventuallyStored = for {
         transformedLineage <- extractLineage(qe)
         storeEvidence <- /* Kensu specifics */ persistenceWriter.kensuStore(transformedLineage, qe) andThen { case Success(_) => log debug s"Lineage is persisted" }
+      } yield storeEvidence
+
+      Await.result(eventuallyStored, 10 minutes)
+      log debug s"Lineage tracking for action '$funcName' is done."
+    }
+    else {
+      log debug s"Skipping lineage tracking for action '$funcName'"
+    }
+  }
+
+  def processDataFrameWriter(funcName: String, w: DataFrameWriter[_], forFunc:Option[String=>Boolean] = Some((_:String)=="save")): Unit = {
+    log debug s"Action '$funcName' execution finished"
+    if (!forFunc.isDefined || forFunc.get(funcName)) {
+      log debug s"Start tracking lineage for action '$funcName'"
+      log debug s"Extracting raw lineage"
+
+      val f = w.getClass.getDeclaredFields.find(_.getName.endsWith("$$df")).get
+      f.setAccessible(true)
+      val ds = f.get(w).asInstanceOf[Dataset[_]]
+
+      val eventuallyStored = for {
+        transformedLineage <- extractLineage(w)
+        storeEvidence <- /* Kensu specifics */ persistenceWriter.kensuStore(transformedLineage, ds.queryExecution) andThen { case Success(_) => log debug s"Lineage is persisted" }
       } yield storeEvidence
 
       Await.result(eventuallyStored, 10 minutes)

@@ -22,10 +22,10 @@ object SparkVersionInfo {
 
   private val SparkVersionExpression = """(\d+)\.(\d+)\.(\d+).*""".r
 
-  def requiredVersion: String = "2.2.x"
+  def requiredVersion: String = "2.1.x"
 
   def matchesRequirements: Boolean = {
     val SparkVersionExpression(ver1, ver2, _) = spark.SPARK_VERSION
-    ver1.toInt == 2 && ver2.toInt == 2
+    ver1.toInt == 2 && ver2.toInt >= 1
   }
 }
