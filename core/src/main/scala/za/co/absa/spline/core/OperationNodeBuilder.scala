@@ -56,11 +56,11 @@ class OperationNodeBuilderFactory(implicit hadoopConfiguration: Configuration, m
     case a: SubqueryAlias => new AliasNodeBuilder(a)
 
     // spark 2.2+ only
-    case sc if sc.getClass.getName == "org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand" => 
+    case sc if sc.getClass.getName == "org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand" =>
       new DestinationNodeBuilder(sc.asInstanceOf[org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand])
     // spark 2.1 => no SaveIntoDataSourceCommand available
     case f:FakeSaveIntoDatasourceFromDatasetCommand => new SaveDatasetNodeBuilder(f)
-    
+
     case lr: LogicalRelation => new SourceNodeBuilder(lr)
 
     case x => new GenericNodeBuilder(x)
@@ -273,8 +273,12 @@ private class SortNodeBuilder(val operation: Sort)
                              (implicit val metaDatasetFactory: MetaDatasetFactory) extends OperationNodeBuilder[Sort] with ExpressionMapper {
   def build(): op.Operation = op.Sort(
     buildOperationProps(),
-    for (SortOrder(expression, direction, nullOrdering, _) <- operation.order)
-      yield op.SortOrder(expression, direction.sql, nullOrdering.sql)
+    for (o <- operation.order) yield {
+      val expression = o.child
+      val direction = o.direction
+      val nullOrdering = o.nullOrdering
+      op.SortOrder(expression, direction.sql, nullOrdering.sql)
+    }
   )
 }
 

@@ -40,7 +40,11 @@ object SparkLineageInitializer extends Logging {
     */
   implicit class SparkSessionWrapper(sparkSession: SparkSession) {
 
-    private val sessionState = sparkSession.sessionState
+    private val sessionState/*:org.apache.spark.sql.internal.SessionState => not accessible in 2.1.0*/ = {
+      val ff = sparkSession.getClass.getDeclaredFields().find(_.getName == "sessionState").get
+      ff.setAccessible(true)
+      ff.get(sparkSession)//.asInstanceOf[org.apache.spark.sql.internal.SessionState]
+    }
 
     private implicit val executionContext: ExecutionContext = ExecutionContext.global
 
@@ -69,7 +73,10 @@ object SparkLineageInitializer extends Logging {
       require(SparkVersionInfo.matchesRequirements, s"Unsupported Spark version: ${spark.SPARK_VERSION}. Required version ${SparkVersionInfo.requiredVersion}")
       val hadoopConfiguration = sparkSession.sparkContext.hadoopConfiguration
       val persistenceFactory = configurer.persistenceFactory
-      sessionState.listenerManager register new DataLineageListener(persistenceFactory, hadoopConfiguration)
+      val ff = sessionState.getClass.getDeclaredMethod("listenerManager")
+      ff.setAccessible(true)
+      val listenerManager = ff.invoke(sessionState).asInstanceOf[org.apache.spark.sql.util.ExecutionListenerManager]
+      listenerManager register new DataLineageListener(persistenceFactory, hadoopConfiguration)
     }
 
     private[core] val defaultSplineConfiguration = {
@@ -87,10 +94,21 @@ object SparkLineageInitializer extends Logging {
     }
 
     private def preventDoubleInitialization(): Unit = {
-      val sessionConf = sessionState.conf
-      if (sessionConf contains initFlagKey)
+      // Spark 2.1 crap
+      val ff = sessionState.getClass.getDeclaredMethod("conf")
+      ff.setAccessible(true)
+      val sessionConf = ff.invoke(sessionState)//.asInstanceOf[org.apache.spark.sql.internal.SQLConf]
+
+      val gg = sessionConf.getClass.getDeclaredMethods.find(_.getName == "contains").get
+      gg.setAccessible(true)
+      val isInit = gg.invoke(sessionConf, initFlagKey).asInstanceOf[Boolean]
+
+      if (isInit)
         throw new IllegalStateException("Lineage tracking is already initialized")
-      sessionConf.setConfString(initFlagKey, true.toString)
+
+      val ss = sessionConf.getClass.getDeclaredMethods.find(_.getName == "setConfString").get
+      ss.setAccessible(true)
+      ss.invoke(sessionConf, initFlagKey, true.toString)
     }
   }
 

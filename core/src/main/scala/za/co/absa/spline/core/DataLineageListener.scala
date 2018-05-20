@@ -114,7 +114,7 @@ class DataLineageListener(persistenceFactory: PersistenceFactory, hadoopConfigur
         storeEvidence <- /* Kensu specifics */ persistenceWriter.kensuStore(transformedLineage, ds.queryExecution) andThen { case Success(_) => log debug s"Lineage is persisted" }
       } yield storeEvidence
 
-      Await.result(eventuallyStored, 10 minutes)
+      Await.result(eventuallyStored, scala.concurrent.duration.Duration.Inf)
       log debug s"Lineage tracking for action '$funcName' is done."
     }
     else {

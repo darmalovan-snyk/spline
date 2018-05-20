@@ -38,7 +38,14 @@ trait ExpressionMapper extends DataTypeMapper {
     case a: expressions.Alias => expr.Alias(a.name, a.simpleString, fromSparkDataType(a.dataType, a.nullable), a.children map fromSparkExpression)
     case a: expressions.AttributeReference => expr.AttributeReference(attributeFactory.getOrCreate(a.exprId.id, a.name, a.dataType, a.nullable), a.name, fromSparkDataType(a.dataType, a.nullable))
     case bo: expressions.BinaryOperator => expr.Binary(bo.nodeName, bo.symbol, bo.simpleString, fromSparkDataType(bo.dataType, bo.nullable), bo.children map fromSparkExpression)
-    case u: expressions.ScalaUDF => expr.UserDefinedFunction(u.udfName getOrElse u.function.getClass.getName, u.simpleString, fromSparkDataType(u.dataType, u.nullable), u.children map fromSparkExpression)
+    case u: expressions.ScalaUDF =>
+      // Spark 2.1.0 => no u.udfName yet....
+      val uname = scala.util.Try{
+        val nf = u.getClass.getDeclaredFields().find(_.getName.endsWith("udfName")).get
+        nf.setAccessible(true)
+        nf.get(u).asInstanceOf[Option[String]].get
+      }.toOption.getOrElse(u.function.getClass.getName)
+      expr.UserDefinedFunction(uname, u.simpleString, fromSparkDataType(u.dataType, u.nullable), u.children map fromSparkExpression)
     case x => expr.Generic(x.nodeName, x.simpleString, fromSparkDataType(x.dataType, x.nullable), x.children map fromSparkExpression)
   }
 }
