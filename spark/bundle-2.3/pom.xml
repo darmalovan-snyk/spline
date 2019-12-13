@@ -31,7 +31,7 @@
     <dependencies>
         <dependency>
             <groupId>za.co.absa.spline</groupId>
-            <artifactId>spark-agent</artifactId>
+            <artifactId>spark-agent_${spark.version}</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
