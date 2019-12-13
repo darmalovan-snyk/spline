@@ -21,7 +21,7 @@ import java.util.Properties
 import com.databricks.spark.xml.XmlRelation
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
+import org.apache.spark.sql.catalyst.catalog.CatalogTable
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
@@ -73,10 +73,18 @@ class ReadCommandExtractor(pathQualifier: PathQualifier, session: SparkSession) 
           sys.error(s"Relation is not supported: $br")
       }
 
-      case htr: HiveTableRelation =>
-        val catalogTable = htr.tableMeta
+      case htr if htr.getClass.getName == "org.apache.spark.sql.catalyst.catalog.HiveTableRelation" =>
+        val catalogTable = getFieldValue[CatalogTable](htr, fieldName = "tableMeta")
         ReadCommand(SourceIdentifier.forTable(catalogTable)(pathQualifier, session), operation)
     }
+
+  private def getFieldValue[T](o:Any, fieldName:String): T = {
+    val field = o.getClass.getDeclaredFields.find(_.getName == fieldName) //for some reasons, "find" works better (e.g. when overloaded)
+      .getOrElse(throw new IllegalStateException(s"field $fieldName do not exist.\navailable fields: ${o.getClass.getDeclaredFields.map(_.getName).toSeq}"))
+    field.setAccessible(true)
+    val r = field.get(o).asInstanceOf[T]
+    r
+  }
 
 }
 
