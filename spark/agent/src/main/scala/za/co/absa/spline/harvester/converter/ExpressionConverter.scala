@@ -74,7 +74,16 @@ class ExpressionConverter(
         getExpressionExtraParameters(e))
   }
 
-  private def getDataType(expr: SparkExpression) = dataTypeConverter.convert(expr.dataType, expr.nullable)
+  private def getDataType(expr: SparkExpression) = {
+    import za.co.absa.spline.model.dt.Simple
+    import scala.util.Try
+    // some expressions like WindowSpec.dataType throws UnsupportedOperationException
+    val sparkNullable = Try(expr.nullable).toOption.getOrElse(true)
+    val datatypeFromSpark = Try(expr.dataType)
+      .toOption
+      .map(sparkDataType => dataTypeConverter.convert(sparkDataType, sparkNullable))
+    datatypeFromSpark.getOrElse(Simple("unknown", nullable = sparkNullable))
+  }
 }
 
 object ExpressionConverter {
