@@ -39,7 +39,7 @@
     "@angular/router": "4.4.4",
     "angular-tree-component": "5.0.0",
     "bootstrap": "3.3.7",
-    "core-js": "2.5.1",
+    "core-js": "3.6.5",
     "es6-shim": "0.35.3",
     "font-awesome": "4.7.0",
     "hammerjs": "2.0.8",
