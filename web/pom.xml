@@ -72,7 +72,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <version>4.3.3.RELEASE</version>
+            <version>4.3.29.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.thymeleaf</groupId>
@@ -243,29 +243,29 @@
                                 <!-- Install NPM dependencies -->
                                 <echo>Install NPM dependencies</echo>
                                 <exec executable="cmd" dir="${webui.basedir}" osfamily="windows" failonerror="true">
-                                    <arg line="/c npm install --no-color" />
+                                    <arg line="/c npm install --no-color"/>
                                 </exec>
                                 <exec executable="npm" dir="${webui.basedir}" osfamily="unix" failonerror="true">
-                                    <arg line="install --no-color" />
+                                    <arg line="install --no-color"/>
                                 </exec>
 
                                 <!-- Install typings -->
                                 <echo>Install typings</echo>
                                 <exec executable="cmd" dir="${webui.basedir}" osfamily="windows" failonerror="true">
-                                    <arg line="/c npm run install-typings --no-color" />
+                                    <arg line="/c npm run install-typings --no-color"/>
                                 </exec>
                                 <exec executable="npm" dir="${webui.basedir}" osfamily="unix" failonerror="true">
-                                    <arg line="run install-typings --no-color" />
+                                    <arg line="run install-typings --no-color"/>
                                 </exec>
 
                                 <echo>Executing UI build</echo>
                                 <exec executable="cmd" dir="${webui.basedir}" osfamily="windows" failonerror="true">
-                                    <env key="SPLINE_VERSION" value="${project.version}" />
-                                    <arg line="/c npm run prod-build --no-color" />
+                                    <env key="SPLINE_VERSION" value="${project.version}"/>
+                                    <arg line="/c npm run prod-build --no-color"/>
                                 </exec>
                                 <exec executable="npm" dir="${webui.basedir}" osfamily="unix" failonerror="true">
-                                    <env key="SPLINE_VERSION" value="${project.version}" />
-                                    <arg line="run prod-build --no-color" />
+                                    <env key="SPLINE_VERSION" value="${project.version}"/>
+                                    <arg line="run prod-build --no-color"/>
                                 </exec>
                             </target>
                         </configuration>
